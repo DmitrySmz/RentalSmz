@@ -1,0 +1,53 @@
+
+
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # При необходимости — отдельный seed-файл с начальными ДАННЫМИ (не схемой)
+      # - ./scripts/seed.sql:/docker-entrypoint-initdb.d/01_seed.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 2s
+      timeout: 2s
+      retries: 20
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file: .env
+    depends_on:
+      db:
+        condition: service_healthy
+    ports: ["8000:8000"]
+    volumes:
+      - ./app:/app/app
+      - ./migrations:/app/migrations
+      - ./alembic.ini:/app/alembic.ini
+      - ./scripts:/app/scripts
+    command: >
+      sh -c "
+      alembic upgrade head &&
+      uvicorn app.main:app --host ${APP_HOST} --port ${APP_PORT}
+      "
+      
+
+  apache:
+    image: httpd:2.4
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+    volumes:
+      - ./apache.conf:/usr/local/apache2/conf/httpd.conf:ro
+
+volumes:
+  pgdata:
