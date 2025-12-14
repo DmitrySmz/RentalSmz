@@ -5,6 +5,7 @@
 --   manager/manager123
 --   cashier/cashier123
 
+
 BEGIN;
 
 -- 1) rental_points: гарантируем пункт 1
