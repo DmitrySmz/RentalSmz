@@ -1,0 +1,51 @@
+<!-- app/templates/catalog.html -->
+{% extends "base.html" %}
+{% block title %}Каталог{% endblock %}
+
+{% block content %}
+  <h1 class="h1">Каталог</h1>
+  <meta charset="utf-8" />
+  <section class="card">
+    <div class="row">
+      <div class="field">
+        <label>Пункт проката (point_id)</label>
+        <input id="pointId" type="number" value="1" min="1"/>
+      </div>
+
+      <div class="field">
+        <label>Начало</label>
+        <input id="startDate" type="date" />
+      </div>
+
+      <div class="field">
+        <label>Конец</label>
+        <input id="endDate" type="date" />
+      </div>
+
+      <div class="field field--grow">
+        <label>Поиск</label>
+        <input id="qName" placeholder="например, Deuter / MSR / палатка..." />
+      </div>
+
+      <button id="btnReload" class="btn">Обновить</button>
+    </div>
+
+    <div id="catalogMsg" class="msg"></div>
+
+    <table class="table" id="productsTable">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Название</th>
+          <th>Бренд</th>
+          <th>Параметры</th>
+          <th>Цена/депозит</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="productsTbody">
+        <!-- JS вставит строки -->
+      </tbody>
+    </table>
+  </section>
+{% endblock %}

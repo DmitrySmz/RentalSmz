@@ -1,26 +1,32 @@
+<!-- app/templates/base.html -->
 <!doctype html>
 <html lang="ru">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>{% block title %}Rental App{% endblock %}</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>{% block title %}RentalSmz{% endblock %}</title>
 
-  <!-- ВАЖНО: только через /static (а не /Users/...) -->
-  <link rel="stylesheet" href="{{ url_for('static', path='css/app.css') }}">
+  <!-- никаких абсолютных путей типа /Users/... -->
+  <link rel="stylesheet" href="{{ request.url_for('static', path='css/app.css') }}">
+  <script defer src="{{ request.url_for('static', path='js/app.js') }}"></script>
 </head>
 <body>
   <header class="topbar">
-    <div class="container">
-      <div class="brand">
-        <a href="/">Rental</a>
-      </div>
+    <div class="container topbar__inner">
+      <a class="brand" href="/">RentalSmz</a>
 
       <nav class="nav">
-        <a href="/">Каталог</a>
+        <a href="/">Главная</a>
+        <a href="/catalog">Каталог</a>
         <a href="/dashboard">Dashboard</a>
-        <a href="/login">Вход</a>
-        <a href="/register">Регистрация</a>
-        <a href="#" id="logoutLink">Выход</a>
+        <a href="/docs" target="_blank">Swagger</a>
+
+        {% if user %}
+          <a href="/logout">Выйти</a>
+        {% else %}
+          <a href="/login">Войти</a>
+          <a href="/register">Регистрация</a>
+        {% endif %}
       </nav>
     </div>
   </header>
@@ -29,13 +35,6 @@
     {% block content %}{% endblock %}
   </main>
 
-  <footer class="footer">
-    <div class="container">
-      <small>Session idle: 2 min (см. требования)</small>
-    </div>
-  </footer>
-
-  <!-- ВАЖНО: тоже через /static -->
-  <script src="{{ url_for('static', path='js/app.js') }}" defer></script>
+  {% block scripts %}{% endblock %}
 </body>
 </html>

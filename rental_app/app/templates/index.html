@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Главная{% endblock %}
+
+{% block content %}
+<div class="card">
+  <h1>RentalSmz</h1>
+    <meta charset="utf-8" />
+  <p class="muted">Аренда палаток и рюкзаков: каталог → доступность → договор → оплаты.</p>
+
+  {% if user %}
+    <p class="msg ok">Вы уже вошли. Можно открыть Dashboard или Каталог.</p>
+  {% else %}
+    <p class="msg">Сначала войдите или зарегистрируйтесь (клиент), либо войдите как сотрудник.</p>
+  {% endif %}
+
+  <div class="row" style="margin-top:12px;">
+    <div>
+      <a href="/catalog">→ Открыть каталог</a>
+    </div>
+    <div>
+      <a href="/login">→ Войти</a>
+    </div>
+    <div>
+      <a href="/register">→ Регистрация</a>
+    </div>
+  </div>
+
+  <div style="margin-top:14px;" class="muted">
+    Для теста API: <a href="/docs" target="_blank">Swagger</a>
+  </div>
+</div>
+{% endblock %}
