@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Вход{% endblock %}
+{% block content %}
+<div class="card">
+  <h1>Вход</h1>
+    <meta charset="UTF-8">
+  <label>Тип</label>
+  <select id="loginKind">
+    <option value="client">Клиент</option>
+    <option value="employee">Сотрудник</option>
+  </select>
+
+  <div id="clientFields">
+    <label>Email</label>
+    <input id="clientEmail" type="email" placeholder="you@mail.com" />
+  </div>
+
+  <div id="employeeFields" style="display:none;">
+    <label>Логин сотрудника</label>
+    <input id="employeeLogin" type="text" placeholder="admin" />
+  </div>
+
+  <label>Пароль</label>
+  <input id="loginPassword" type="password" placeholder="••••••••" />
+
+  <label style="display:flex; gap:10px; align-items:center; margin-top:12px;">
+    <input id="loginRemember" type="checkbox" style="width:auto;" />
+    remember me
+  </label>
+
+  <button id="loginBtn">Войти</button>
+
+  <div id="loginMsg" class="msg"></div>
+</div>
+{% endblock %}

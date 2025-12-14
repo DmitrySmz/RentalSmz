@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div class="card">
+  <h1>Dashboard</h1>
+  <meta charset="UTF-8">
+  <p>
+    Вы вошли как:
+    <b>{{ user.kind }}</b>
+    {% if user.kind == "client" %}
+      (client_id={{ user.client.client_id }})
+    {% else %}
+      (employee_id={{ user.employee.employee_id }}, role={{ user.employee.role }}, point={{ user.employee.rental_point_id }})
+    {% endif %}
+  </p>
+
+  <p class="msg ok">Теперь можно оборачивать остальные ручки в UI (каталог, договоры, оплаты, возвраты).</p>
+</div>
+{% endblock %}

@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Регистрация{% endblock %}
+{% block content %}
+<div class="card">
+  <h1>Регистрация клиента</h1>
+  <meta charset="UTF-8">
+  <div class="row">
+    <div>
+      <label>Имя</label>
+      <input id="regFirstName" type="text" placeholder="Dmitry" />
+    </div>
+    <div>
+      <label>Фамилия</label>
+      <input id="regLastName" type="text" placeholder="Smaznov" />
+    </div>
+  </div>
+
+  <label>Email</label>
+  <input id="regEmail" type="email" placeholder="you@mail.com" />
+
+  <label>Телефон</label>
+  <input id="regPhone" type="text" placeholder="+7985..." />
+
+  <label>Пароль</label>
+  <input id="regPassword" type="password" placeholder="••••••••" />
+
+  <label style="display:flex; gap:10px; align-items:center; margin-top:12px;">
+    <input id="regRemember" type="checkbox" style="width:auto;" />
+    remember me
+  </label>
+
+  <button id="registerBtn">Создать аккаунт</button>
+
+  <div id="registerMsg" class="msg"></div>
+</div>
+{% endblock %}

@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="card">
+  <h1>Вход</h1>
+    <meta charset="UTF-8">
+  <div class="tabs">
+    <button class="tab active" data-tab="client">Клиент</button>
+    <button class="tab" data-tab="employee">Сотрудник</button>
+  </div>
+
+  <div class="tab-pane" id="tab-client">
+    <form id="clientLoginForm" class="form">
+      <label>Email</label>
+      <input name="email" type="email" required placeholder="you@mail.com"/>
+
+      <label>Пароль</label>
+      <input name="password" type="password" required placeholder="••••••"/>
+
+      <label class="row">
+        <input name="remember" type="checkbox"/>
+        <span>Запомнить меня (remember)</span>
+      </label>
+
+      <button class="btn" type="submit">Войти как клиент</button>
+      <div class="muted">
+        Нет аккаунта? <a href="/register">Регистрация</a>
+      </div>
+    </form>
+  </div>
+
+  <div class="tab-pane hidden" id="tab-employee">
+    <form id="employeeLoginForm" class="form">
+      <label>Логин</label>
+      <input name="login" type="text" required placeholder="admin"/>
+
+      <label>Пароль</label>
+      <input name="password" type="password" required placeholder="••••••"/>
+
+      <label class="row">
+        <input name="remember" type="checkbox"/>
+        <span>Запомнить меня</span>
+      </label>
+
+      <button class="btn" type="submit">Войти как сотрудник</button>
+      <div class="muted">
+        (сотрудники создаются в seed.sql / через БД)
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  AuthUI.initLogin();
+</script>
+{% endblock %}

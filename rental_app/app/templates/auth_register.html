@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="card">
+  <h1>Регистрация клиента</h1>
+  <meta charset="UTF-8">
+  <form id="clientRegisterForm" class="form">
+    <label>Email</label>
+    <input name="email" type="email" required placeholder="you@mail.com"/>
+
+    <label>Пароль</label>
+    <input name="password" type="password" required placeholder="минимум 6 символов"/>
+
+    <label>Телефон</label>
+    <input name="phone" type="tel" placeholder="+7985..."/>
+
+    <div class="grid2">
+      <div>
+        <label>Имя</label>
+        <input name="first_name" type="text"/>
+      </div>
+      <div>
+        <label>Фамилия</label>
+        <input name="last_name" type="text"/>
+      </div>
+    </div>
+
+    <label class="row">
+      <input name="remember" type="checkbox"/>
+      <span>Запомнить меня</span>
+    </label>
+
+    <button class="btn" type="submit">Создать аккаунт</button>
+    <div class="muted">
+      Уже есть аккаунт? <a href="/login">Войти</a>
+    </div>
+  </form>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  AuthUI.initRegister();
+</script>
+{% endblock %}
