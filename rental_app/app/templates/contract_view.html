@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block title %}Договор {{ contract_id }}{% endblock %}
+
+{% block content %}
+<div class="card" id="contractView" data-contract-id="{{ contract_id }}">
+  <div class="row-between">
+    <div>
+      <h1>Договор #{{ contract_id }}</h1>
+      <div id="contractHeader" class="muted">Загрузка…</div>
+    </div>
+    <div class="actions">
+      <a class="btn btn--ghost" href="/my/contracts">Назад</a>
+    </div>
+  </div>
+
+  <div class="hr"></div>
+
+  <h2>Позиции</h2>
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>item_id</th>
+          <th>product_id</th>
+          <th>daily_price</th>
+          <th>deposit_amount</th>
+        </tr>
+      </thead>
+      <tbody id="itemsTbody">
+        <tr><td colspan="4" class="muted">Загрузка…</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="hr"></div>
+
+  <h2>Оплаты</h2>
+  <div class="grid2">
+    <div>
+      <label>Сумма</label>
+      <input id="payAmount" type="number" step="0.01" placeholder="300" />
+    </div>
+    <div>
+      <label>Тип</label>
+      <select id="payType">
+        <option value="deposit">deposit</option>
+        <option value="rent">rent</option>
+        <option value="penalty">penalty</option>
+        <option value="deposit_refund">deposit_refund</option>
+      </select>
+    </div>
+    <div>
+      <label>Метод</label>
+      <select id="payMethod">
+        <option value="card">card</option>
+        <option value="online">online</option>
+        <option value="cash">cash</option>
+      </select>
+    </div>
+    <div class="filters__actions">
+      <button class="btn btn--primary" id="payBtn">Добавить оплату</button>
+    </div>
+  </div>
+
+  <div class="table-wrap" style="margin-top:10px;">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Дата</th>
+          <th>Тип</th>
+          <th>Метод</th>
+          <th>Сумма</th>
+        </tr>
+      </thead>
+      <tbody id="paymentsTbody">
+        <tr><td colspan="5" class="muted">Загрузка…</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="hr"></div>
+
+  <h2>Запросить продление</h2>
+  <div class="grid2">
+    <div>
+      <label>Новая planned_end_date</label>
+      <input id="extendDate" type="date" />
+    </div>
+    <div class="filters__actions">
+      <button class="btn" id="extendReqBtn">Проверить и рассчитать</button>
+    </div>
+  </div>
+  <div id="extendMsg" class="msg"></div>
+
+  <div class="hr"></div>
+
+  <h2>Запросить замену предмета</h2>
+  <div class="grid2">
+    <div>
+      <label>old_item_id</label>
+      <input id="changeOldItem" type="number" placeholder="1" />
+    </div>
+    <div>
+      <label>new_product_id</label>
+      <input id="changeNewProduct" type="number" placeholder="2" />
+    </div>
+    <div class="filters__actions">
+      <button class="btn" id="changeReqBtn">Проверить варианты</button>
+    </div>
+  </div>
+  <div id="changeMsg" class="msg"></div>
+
+  <div class="hr"></div>
+
+  <h2>Отмена</h2>
+  <p class="muted small">Отмена разрешена для draft (по текущим правилам API).</p>
+  <button class="btn btn--danger" id="cancelBtn">Отменить договор</button>
+
+  <div id="contractMsg" class="msg"></div>
+</div>
+{% endblock %}

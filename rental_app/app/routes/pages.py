@@ -1,69 +1,56 @@
 # app/routes/pages.py
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Optional
-from urllib.parse import quote
-
 from fastapi import APIRouter, Request, Depends
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
-from ..dependencies import get_current_user, CurrentUser
-from ..utils.cookies import (
-    SESSION_COOKIE,
-    clear_session_cookie,
-    clear_remember_cookie,
-)
-from ..utils.session_manager import session_manager
+from ..dependencies import get_current_user, require_user, CurrentUser
 
-router = APIRouter(include_in_schema=False)
-
-BASE_DIR = Path(__file__).resolve().parents[1]  # .../app
-templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
+templates = Jinja2Templates(directory="app/templates")
+router = APIRouter(tags=["pages"])
 
 
-def _render(request: Request, name: str, user: Optional[CurrentUser] = None, **ctx):
-    data = {"request": request, "user": user}
-    data.update(ctx)
-    return templates.TemplateResponse(name, data)
+def render(request: Request, name: str, **ctx):
+    # единый способ пробрасывать user во все шаблоны
+    return templates.TemplateResponse(name, {"request": request, **ctx})
 
 
 @router.get("/", response_class=HTMLResponse)
-def index(request: Request, user: Optional[CurrentUser] = Depends(get_current_user)):
-    return _render(request, "index.html", user=user)
+def index(request: Request, user=Depends(get_current_user)):
+    return render(request, "index.html", user=user)
 
 
 @router.get("/login", response_class=HTMLResponse)
-def login_page(request: Request, user: Optional[CurrentUser] = Depends(get_current_user)):
-    # можно оставить auth_login.html (у тебя он уже есть и вызывает AuthUI.initLogin())
-    return _render(request, "auth_login.html", user=user)
+def login_page(request: Request, user=Depends(get_current_user)):
+    if user:
+        return RedirectResponse(url="/dashboard", status_code=302)
+    return render(request, "login.html", user=user)
 
 
 @router.get("/register", response_class=HTMLResponse)
-def register_page(request: Request, user: Optional[CurrentUser] = Depends(get_current_user)):
-    return _render(request, "auth_register.html", user=user)
-
-
-@router.get("/catalog", response_class=HTMLResponse)
-def catalog_page(request: Request, user: Optional[CurrentUser] = Depends(get_current_user)):
-    return _render(request, "catalog.html", user=user)
+def register_page(request: Request, user=Depends(get_current_user)):
+    if user:
+        return RedirectResponse(url="/dashboard", status_code=302)
+    return render(request, "register.html", user=user)
 
 
 @router.get("/dashboard", response_class=HTMLResponse)
-def dashboard(request: Request, user: Optional[CurrentUser] = Depends(get_current_user)):
-    if not user:
-        return RedirectResponse(url=f"/login?next={quote('/dashboard')}", status_code=303)
-    return _render(request, "dashboard.html", user=user)
+def dashboard(request: Request, user: CurrentUser = Depends(require_user)):
+    # пока реализуем клиентский кабинет (сотрудников сделаем потом)
+    return render(request, "dashboard.html", user=user)
 
 
-@router.get("/logout")
-def logout(request: Request):
-    sid = request.cookies.get(SESSION_COOKIE)
-    if sid:
-        session_manager.delete(sid)
+@router.get("/catalog", response_class=HTMLResponse)
+def catalog_page(request: Request, user=Depends(get_current_user)):
+    return render(request, "catalog.html", user=user)
 
-    resp = RedirectResponse(url="/", status_code=303)
-    clear_session_cookie(resp)
-    clear_remember_cookie(resp)
-    return resp
+
+@router.get("/my/contracts", response_class=HTMLResponse)
+def my_contracts_page(request: Request, user: CurrentUser = Depends(require_user)):
+    return render(request, "contracts.html", user=user)
+
+
+@router.get("/contracts/{contract_id}/view", response_class=HTMLResponse)
+def contract_view_page(contract_id: int, request: Request, user: CurrentUser = Depends(require_user)):
+    return render(request, "contract_view.html", user=user, contract_id=contract_id)

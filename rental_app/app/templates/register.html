@@ -3,8 +3,8 @@
 {% block content %}
 <div class="card">
   <h1>Регистрация клиента</h1>
-  <meta charset="UTF-8">
-  <div class="row">
+  <meta charset="utf-8" />
+  <div class="grid2">
     <div>
       <label>Имя</label>
       <input id="regFirstName" type="text" placeholder="Dmitry" />
@@ -24,12 +24,15 @@
   <label>Пароль</label>
   <input id="regPassword" type="password" placeholder="••••••••" />
 
-  <label style="display:flex; gap:10px; align-items:center; margin-top:12px;">
-    <input id="regRemember" type="checkbox" style="width:auto;" />
+  <label class="check">
+    <input id="regRemember" type="checkbox" />
     remember me
   </label>
 
-  <button id="registerBtn">Создать аккаунт</button>
+  <div class="actions">
+    <button class="btn btn--primary" id="registerBtn">Создать аккаунт</button>
+    <a class="btn btn--ghost" href="/login">Уже есть аккаунт</a>
+  </div>
 
   <div id="registerMsg" class="msg"></div>
 </div>

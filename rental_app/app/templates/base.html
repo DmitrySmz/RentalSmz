@@ -5,10 +5,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>{% block title %}RentalSmz{% endblock %}</title>
-
-  <!-- никаких абсолютных путей типа /Users/... -->
-  <link rel="stylesheet" href="{{ request.url_for('static', path='css/app.css') }}">
-  <script defer src="{{ request.url_for('static', path='js/app.js') }}"></script>
+  <link rel="stylesheet" href="{{ url_for('static', path='css/app.css') }}">
 </head>
 <body>
   <header class="topbar">
@@ -16,17 +13,23 @@
       <a class="brand" href="/">RentalSmz</a>
 
       <nav class="nav">
-        <a href="/">Главная</a>
         <a href="/catalog">Каталог</a>
-        <a href="/dashboard">Dashboard</a>
-        <a href="/docs" target="_blank">Swagger</a>
 
         {% if user %}
-          <a href="/logout">Выйти</a>
+          {% if user.kind == "client" %}
+            <a href="/dashboard">ЛК</a>
+            <a href="/my/contracts">Мои договоры</a>
+          {% else %}
+            <a href="/dashboard">Кабинет</a>
+          {% endif %}
+
+          <a href="#" id="logoutLink">Выйти</a>
         {% else %}
-          <a href="/login">Войти</a>
+          <a href="/login">Вход</a>
           <a href="/register">Регистрация</a>
         {% endif %}
+
+        <a href="/docs" class="muted">Swagger</a>
       </nav>
     </div>
   </header>
@@ -35,6 +38,6 @@
     {% block content %}{% endblock %}
   </main>
 
-  {% block scripts %}{% endblock %}
+  <script src="{{ url_for('static', path='js/app.js') }}"></script>
 </body>
 </html>

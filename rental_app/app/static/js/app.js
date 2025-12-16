@@ -1,285 +1,38 @@
-async function apiFetch(url, options = {}) {
-  const opts = {
-    method: options.method || "GET",
-    headers: { "Content-Type": "application/json", ...(options.headers || {}) },
-    credentials: "include", // ВАЖНО: чтобы браузер принял/set-cookie sid
-    body: options.body ? JSON.stringify(options.body) : undefined,
-  };
+// app/static/js/app.js
 
+async function apiFetch(url, options = {}) {
+  const opts = { credentials: "include", ...options };
+
+  if (opts.body !== undefined && opts.body !== null && !(opts.body instanceof FormData)) {
+    // поддержка body как объекта (само JSON.stringify)
+    if (typeof opts.body === "object") {
+      opts.body = JSON.stringify(opts.body);
+    }
+    opts.headers = { ...(opts.headers || {}), "Content-Type": "application/json" };
+  }
 
   const res = await fetch(url, opts);
-  let data = null;
-  try { data = await res.json(); } catch (_) {}
+  const ct = res.headers.get("content-type") || "";
+  const data = ct.includes("application/json")
+    ? await res.json().catch(() => null)
+    : await res.text().catch(() => null);
+
   if (!res.ok) {
-    const msg = (data && (data.detail || data.message)) ? (data.detail || data.message) : `HTTP ${res.status}`;
-    throw new Error(msg);
+    const msg =
+      data && data.detail ? data.detail : typeof data === "string" ? data : `HTTP ${res.status}`;
+    const err = new Error(msg);
+    err.status = res.status;
+    err.data = data;
+    throw err;
   }
   return data;
 }
 
-function $(id) { return document.getElementById(id); }
-
-function setMsg(el, text, kind) {
+function setMsg(el, text, kind = "") {
   if (!el) return;
-  el.classList.remove("err", "ok");
-  if (kind) el.classList.add(kind);
   el.textContent = text || "";
+  el.className = "msg " + (kind ? `msg--${kind}` : "");
 }
-
-async function doLogin() {
-  const kind = $("loginKind")?.value || "client";
-  const password = $("loginPassword")?.value || "";
-  const remember = !!$("loginRemember")?.checked;
-
-  try {
-    if (kind === "client") {
-      const email = $("clientEmail")?.value || "";
-      await apiFetch("/auth/client/login", { method: "POST", body: { email, password, remember } });
-    } else {
-      const login = $("employeeLogin")?.value || "";
-      await apiFetch("/auth/employee/login", { method: "POST", body: { login, password, remember } });
-    }
-    window.location.href = "/dashboard";
-  } catch (e) {
-    setMsg($("loginMsg"), e.message, "err");
-  }
-}
-
-async function doRegister() {
-  const body = {
-    email: $("regEmail")?.value || "",
-    password: $("regPassword")?.value || "",
-    phone: $("regPhone")?.value || null,
-    first_name: $("regFirstName")?.value || null,
-    last_name: $("regLastName")?.value || null,
-    remember: !!$("regRemember")?.checked,
-  };
-
-  try {
-    await apiFetch("/auth/client/register", { method: "POST", body });
-    window.location.href = "/dashboard";
-  } catch (e) {
-    setMsg($("registerMsg"), e.message, "err");
-  }
-}
-
-function wireLoginKindToggle() {
-  const sel = $("loginKind");
-  if (!sel) return;
-
-  const clientFields = $("clientFields");
-  const employeeFields = $("employeeFields");
-
-  const apply = () => {
-    const kind = sel.value;
-    if (kind === "client") {
-      if (clientFields) clientFields.style.display = "";
-      if (employeeFields) employeeFields.style.display = "none";
-    } else {
-      if (clientFields) clientFields.style.display = "none";
-      if (employeeFields) employeeFields.style.display = "";
-    }
-    setMsg($("loginMsg"), "", null);
-  };
-
-  sel.addEventListener("change", apply);
-  apply();
-}
-
-async function doLogout(e) {
-  if (e) e.preventDefault();
-  // можно просто перейти на /logout (сервер почистит куки)
-  window.location.href = "/logout";
-}
-
-document.addEventListener("DOMContentLoaded", () => {
-  // login page
-  if ($("loginBtn")) {
-    wireLoginKindToggle();
-    $("loginBtn").addEventListener("click", doLogin);
-  }
-
-  // register page
-  if ($("registerBtn")) {
-    $("registerBtn").addEventListener("click", doRegister);
-  }
-
-  // logout
-  const lnk = $("logoutLink");
-  if (lnk) lnk.addEventListener("click", doLogout);
-});
-
-function buildQuery(params) {
-  const p = new URLSearchParams();
-  for (const [k, v] of Object.entries(params || {})) {
-    if (v === null || v === undefined) continue;
-    if (typeof v === "string" && v.trim() === "") continue;
-    p.set(k, String(v));
-  }
-  const s = p.toString();
-  return s ? `?${s}` : "";
-}
-
-async function apiGet(path, params) {
-  return apiFetch(path + buildQuery(params), { method: "GET" });
-}
-
-const CatalogUI = {
-  async initCatalog() {
-    await this.loadCategories();
-    await this.loadProducts();
-
-    const btn = document.getElementById("catSearchBtn");
-    btn.addEventListener("click", async () => {
-      await this.loadProducts();
-    });
-  },
-
-  getFilters() {
-    return {
-      category_id: document.getElementById("catCategory").value || null,
-      name: document.getElementById("catName").value || null,
-      brand: document.getElementById("catBrand").value || null,
-    };
-  },
-
-  getAdvancedFilters() {
-    return {
-      category_id: document.getElementById("catCategory").value || null,
-      brand: document.getElementById("catBrand").value || null,
-      price_max: document.getElementById("catPriceMax").value || null,
-      volume_liters_gte: document.getElementById("catVolGte").value || null,
-      people_count: document.getElementById("catPeople").value || null,
-      temperature_min_lte: document.getElementById("catTempLte").value || null,
-    };
-  },
-
-  async loadCategories() {
-    const sel = document.getElementById("catCategory");
-    const cats = await apiGet("/catalog/categories");
-    // cats: [{category_id, name, ...}]
-    for (const c of cats) {
-      const opt = document.createElement("option");
-      opt.value = c.category_id;
-      opt.textContent = c.name;
-      sel.appendChild(opt);
-    }
-  },
-
-  async loadProducts() {
-    const list = document.getElementById("catList");
-    const empty = document.getElementById("catEmpty");
-    list.innerHTML = "";
-    empty.style.display = "none";
-
-    const adv = this.getAdvancedFilters();
-    const usingAdvanced =
-      adv.price_max || adv.volume_liters_gte || adv.people_count || adv.temperature_min_lte;
-
-    let products = [];
-    try {
-      if (usingAdvanced) {
-        products = await apiGet("/catalog/search", adv);
-      } else {
-        products = await apiGet("/catalog/products", this.getFilters());
-      }
-    } catch (e) {
-      toast(e.message);
-      return;
-    }
-
-    if (!products || products.length === 0) {
-      empty.style.display = "";
-      return;
-    }
-
-    for (const p of products) {
-      list.appendChild(this.renderProductCard(p));
-    }
-  },
-
-  renderProductCard(p) {
-    const el = document.createElement("div");
-    el.className = "prod";
-    el.innerHTML = `
-      <h3>${escapeHtml(p.name)}</h3>
-      <div class="meta">
-        <div><b>Brand:</b> ${escapeHtml(p.brand || "-")}</div>
-        <div><b>Volume:</b> ${p.volume_liters ?? "-"}</div>
-        <div><b>People:</b> ${p.people_count ?? "-"}</div>
-        <div><b>Temp min:</b> ${p.temperature_min ?? "-"}</div>
-      </div>
-      <div class="price">
-        <div><b>Daily:</b> <span class="code">${p.default_daily_price}</span></div>
-        <div><b>Deposit:</b> <span class="code">${p.default_deposit}</span></div>
-      </div>
-
-      <button class="smallbtn" data-action="check" data-product="${p.product_id}">
-        Проверить доступность
-      </button>
-
-      <div class="avail" id="avail-${p.product_id}">
-        <div class="msg" style="margin:0;">Пока не проверяли</div>
-      </div>
-    `;
-
-    el.querySelector('[data-action="check"]').addEventListener("click", async () => {
-      await this.checkAvailability(p.product_id);
-    });
-
-    return el;
-  },
-
-  async checkAvailability(productId) {
-    const pointId = document.getElementById("avPointId").value;
-    const start = document.getElementById("avStart").value;
-    const end = document.getElementById("avEnd").value;
-
-    const box = document.getElementById(`avail-${productId}`);
-
-    if (!pointId || !start || !end) {
-      box.innerHTML = `<div class="msg err">Укажи point_id, start и end</div>`;
-      return;
-    }
-
-    box.innerHTML = `<div class="msg">Проверяю...</div>`;
-
-    try {
-      const res = await apiGet("/availability", {
-        point_id: pointId,
-        product_id: productId,
-        start,
-        end,
-      });
-
-      const ids = (res.item_ids || []).slice(0, 20);
-      box.innerHTML = `
-        <div class="msg ok">
-          Доступно: <b>${res.available_count}</b>
-        </div>
-        <div class="meta">
-          item_ids (первые 20): <span class="code">${ids.join(", ") || "-"}</span>
-        </div>
-      `;
-    } catch (e) {
-      box.innerHTML = `<div class="msg err">${escapeHtml(e.message)}</div>`;
-    }
-  },
-};
-
-window.CatalogUI = CatalogUI;
-
-function escapeHtml(s) {
-  return String(s)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
-// app/static/js/app.js
-function qs(id) { return document.getElementById(id); }
 
 function todayISO() {
   const d = new Date();
@@ -288,9 +41,8 @@ function todayISO() {
   const dd = String(d.getDate()).padStart(2, "0");
   return `${yyyy}-${mm}-${dd}`;
 }
-
 function addDaysISO(iso, days) {
-  const d = new Date(iso);
+  const d = new Date(iso + "T00:00:00");
   d.setDate(d.getDate() + days);
   const yyyy = d.getFullYear();
   const mm = String(d.getMonth() + 1).padStart(2, "0");
@@ -298,124 +50,601 @@ function addDaysISO(iso, days) {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-async function fetchJSON(url) {
-  const r = await fetch(url, { credentials: "include" });
-  const txt = await r.text();
-  let data;
-  try { data = txt ? JSON.parse(txt) : null; } catch { data = txt; }
-  if (!r.ok) {
-    const msg = (data && data.detail) ? data.detail : `HTTP ${r.status}`;
-    throw new Error(msg);
-  }
-  return data;
+function initLogout() {
+  const link = document.getElementById("logoutLink");
+  if (!link) return;
+  link.addEventListener("click", async (e) => {
+    e.preventDefault();
+    try {
+      await apiFetch("/auth/logout", { method: "POST" });
+    } finally {
+      window.location.href = "/";
+    }
+  });
 }
 
-function productParams(p) {
+function initDashboard() {
+  const meBox = document.getElementById("meBox");
+  if (!meBox) return;
+  apiFetch("/auth/me")
+    .then((me) => {
+      if (me.kind === "client") {
+        meBox.textContent = `Вы: ${me.email || ""} ${me.first_name || ""} ${me.last_name || ""}`.trim();
+      } else {
+        meBox.textContent = `Сотрудник: ${me.login} (${me.role})`;
+      }
+    })
+    .catch(() => {
+      meBox.textContent = "Не удалось загрузить профиль.";
+    });
+}
+
+/* ---------------- AUTH ---------------- */
+/**
+ * Поддерживает ОБА шаблона логина:
+ * - login.html (select #loginKind, input #clientEmail)
+ * - auth_login.html (табы #tabClient/#tabEmployee, input #loginEmail)
+ * Бэкенд не трогаем.
+ */
+function initLogin() {
+  const btn = document.getElementById("loginBtn");
+  if (!btn) return;
+
+  const msg = document.getElementById("loginMsg");
+
+  const kindSelect = document.getElementById("loginKind"); // login.html
+  const tabClient = document.getElementById("tabClient"); // auth_login.html
+  const tabEmployee = document.getElementById("tabEmployee");
+
+  const clientFields = document.getElementById("clientFields");
+  const employeeFields = document.getElementById("employeeFields");
+
+  let mode = "client";
+
+  function applyMode(m) {
+    mode = m === "employee" ? "employee" : "client";
+
+    if (clientFields) clientFields.style.display = mode === "client" ? "" : "none";
+    if (employeeFields) employeeFields.style.display = mode === "employee" ? "" : "none";
+
+    if (tabClient) tabClient.classList.toggle("is-active", mode === "client");
+    if (tabEmployee) tabEmployee.classList.toggle("is-active", mode === "employee");
+
+    setMsg(msg, "");
+  }
+
+  if (kindSelect) {
+    kindSelect.addEventListener("change", () => applyMode(kindSelect.value));
+    applyMode(kindSelect.value || "client");
+  } else if (tabClient || tabEmployee) {
+    tabClient?.addEventListener("click", () => applyMode("client"));
+    tabEmployee?.addEventListener("click", () => applyMode("employee"));
+    applyMode("client");
+  } else {
+    applyMode("client");
+  }
+
+  btn.addEventListener("click", async () => {
+    setMsg(msg, "");
+    try {
+      const remember = !!document.getElementById("loginRemember")?.checked;
+      const password = (document.getElementById("loginPassword")?.value || "").trim();
+      if (!password) throw new Error("Введите пароль.");
+
+      if (mode === "client") {
+        const email = (
+          document.getElementById("loginEmail")?.value ||
+          document.getElementById("clientEmail")?.value ||
+          ""
+        ).trim();
+        if (!email) throw new Error("Введите email.");
+        await apiFetch("/auth/client/login", {
+          method: "POST",
+          body: { email, password, remember },
+        });
+      } else {
+        const login = (document.getElementById("employeeLogin")?.value || "").trim();
+        if (!login) throw new Error("Введите логин сотрудника.");
+        await apiFetch("/auth/employee/login", {
+          method: "POST",
+          body: { login, password, remember },
+        });
+      }
+
+      window.location.href = "/dashboard";
+    } catch (e) {
+      setMsg(msg, e.message, "error");
+    }
+  });
+}
+
+function initRegister() {
+  const btn = document.getElementById("registerBtn");
+  if (!btn) return;
+
+  const msg = document.getElementById("registerMsg");
+
+  btn.addEventListener("click", async () => {
+    setMsg(msg, "");
+    try {
+      const payload = {
+        email: document.getElementById("regEmail")?.value || "",
+        password: document.getElementById("regPassword")?.value || "",
+        phone: document.getElementById("regPhone")?.value || null,
+        first_name: document.getElementById("regFirstName")?.value || null,
+        last_name: document.getElementById("regLastName")?.value || null,
+        remember: !!document.getElementById("regRemember")?.checked,
+      };
+
+      await apiFetch("/auth/client/register", {
+        method: "POST",
+        body: payload,
+      });
+
+      window.location.href = "/dashboard";
+    } catch (e) {
+      setMsg(msg, e.message, "error");
+    }
+  });
+}
+
+/* ---------------- CATALOG ---------------- */
+
+function specsLine(p) {
   const parts = [];
   if (p.volume_liters != null) parts.push(`объём: ${p.volume_liters}л`);
-  if (p.people_count != null) parts.push(`мест: ${p.people_count}`);
-  if (p.temperature_min != null) parts.push(`t° min: ${p.temperature_min}`);
-  return parts.length ? parts.join(", ") : "—";
+  if (p.people_count != null) parts.push(`людей: ${p.people_count}`);
+  if (p.temperature_min != null) parts.push(`tmin: ${p.temperature_min}°C`);
+  if (p.weight_grams != null) parts.push(`вес: ${p.weight_grams}г`);
+  if (p.size_label) parts.push(`размер: ${p.size_label}`);
+  return parts.join(" • ");
 }
 
-async function loadProducts() {
-  const msg = qs("catalogMsg");
-  const tbody = qs("productsTbody");
-  const qName = qs("qName").value.trim();
-
-  msg.textContent = "Загрузка...";
-  tbody.innerHTML = "";
-
-  const params = new URLSearchParams();
-  if (qName) params.set("name", qName);
-  params.set("limit", "200");
-
-  const url = `/catalog/products?${params.toString()}`;
-  const products = await fetchJSON(url);
-
-  if (!products.length) {
-    msg.textContent = "Товары не найдены.";
-    return;
-  }
-
-  msg.textContent = `Найдено: ${products.length}`;
-
-  for (const p of products) {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td class="mono">${p.product_id}</td>
-      <td>${p.name}</td>
-      <td>${p.brand ?? "—"}</td>
-      <td><span class="badge">${productParams(p)}</span></td>
-      <td>
-        <div><span class="badge">day: ${p.default_daily_price}</span></div>
-        <div style="margin-top:6px;"><span class="badge">dep: ${p.default_deposit}</span></div>
-      </td>
-      <td>
-        <button class="btn" data-action="check" data-product-id="${p.product_id}">
-          Проверить доступность
-        </button>
-        <div class="msg" id="avail-${p.product_id}"></div>
-      </td>
-    `;
-    tbody.appendChild(tr);
-  }
+function shortDesc(s, n = 80) {
+  if (!s) return "";
+  const t = String(s).trim();
+  if (t.length <= n) return t;
+  return t.slice(0, n - 1) + "…";
 }
 
-async function checkAvailability(productId) {
-  const pointId = Number(qs("pointId").value || 1);
-  const start = qs("startDate").value;
-  const end = qs("endDate").value;
+function productRow(p, categoryName) {
+  const tr = document.createElement("tr");
+  tr.dataset.productId = String(p.product_id);
 
-  const out = qs(`avail-${productId}`);
-  out.textContent = "Проверяем...";
+  const secondLine = [
+    p.brand ? `бренд: ${p.brand}` : null,
+    p.description ? shortDesc(p.description) : null,
+  ].filter(Boolean).join(" • ");
 
-  if (!start || !end) {
-    out.textContent = "Укажи даты start/end.";
-    return;
-  }
-
-  const params = new URLSearchParams({
-    point_id: String(pointId),
-    product_id: String(productId),
-    start,
-    end,
-  });
-
-  const data = await fetchJSON(`/availability?${params.toString()}`);
-  out.innerHTML = `
-    <div>Доступно: <b>${data.available_count}</b></div>
-    <div class="mono" style="margin-top:6px; word-break:break-all;">
-      item_ids: ${data.item_ids.join(", ")}
-    </div>
+  tr.innerHTML = `
+    <td>${p.product_id}</td>
+    <td>
+      <div>${p.name}</div>
+      <div class="muted small">${secondLine || ""}</div>
+    </td>
+    <td>${categoryName || p.category_id}</td>
+    <td>${p.default_daily_price}</td>
+    <td>${p.default_deposit}</td>
+    <td class="muted small">${specsLine(p) || ""}</td>
+    <td>
+      <div class="row-actions">
+        <button class="btn btn--sm" data-action="check">Доступность</button>
+        <button class="btn btn--sm btn--primary" data-action="contract" disabled>Создать договор</button>
+      </div>
+      <div class="muted small" data-slot="avail"></div>
+    </td>
   `;
+  return tr;
 }
 
-document.addEventListener("DOMContentLoaded", async () => {
-  // Если это не страница каталога — просто выходим
-  if (!qs("productsTable")) return;
+function initCatalog() {
+  const tbody = document.getElementById("productsTbody");
+  if (!tbody) return;
 
-  const start = qs("startDate");
-  const end = qs("endDate");
-  const base = todayISO();
-  start.value = addDaysISO(base, 1);
-  end.value = addDaysISO(base, 3);
+  const msg = document.getElementById("catalogMsg");
 
-  qs("btnReload").addEventListener("click", async () => {
-    try { await loadProducts(); } catch (e) { qs("catalogMsg").textContent = `Ошибка: ${e.message}`; }
-  });
+  const startEl = document.getElementById("startDate");
+  const endEl = document.getElementById("endDate");
+  if (startEl && !startEl.value) startEl.value = todayISO();
+  if (endEl && !endEl.value) endEl.value = addDaysISO(startEl.value || todayISO(), 2);
 
-  qs("productsTbody").addEventListener("click", async (e) => {
-    const btn = e.target.closest("button[data-action='check']");
+  const qCategory = document.getElementById("qCategory");
+  const categoryMap = new Map();
+
+  async function loadCategories() {
+    if (!qCategory) return;
+    qCategory.innerHTML = `<option value="">Все категории</option>`;
+    try {
+      const cats = await apiFetch("/catalog/categories");
+      for (const c of cats) categoryMap.set(c.category_id, c.name);
+      qCategory.innerHTML =
+        `<option value="">Все категории</option>` +
+        cats.map((c) => `<option value="${c.category_id}">${c.name}</option>`).join("");
+    } catch (e) {
+      // не ломаем каталог, просто оставляем без категорий
+    }
+  }
+
+  function buildQuery() {
+    const qs = new URLSearchParams();
+
+    const name = (document.getElementById("qName")?.value || "").trim();
+    const brand = (document.getElementById("qBrand")?.value || "").trim();
+    const category_id = (document.getElementById("qCategory")?.value || "").trim();
+
+    const price_max = (document.getElementById("qPriceMax")?.value || "").trim();
+    const volume_liters_gte = (document.getElementById("qVolume")?.value || "").trim();
+    const people_count = (document.getElementById("qPeople")?.value || "").trim();
+    const temperature_min_lte = (document.getElementById("qTemp")?.value || "").trim();
+
+    if (name) qs.set("name", name);
+    if (brand) qs.set("brand", brand);
+    if (category_id) qs.set("category_id", category_id);
+
+    if (price_max) qs.set("price_max", price_max);
+    if (volume_liters_gte) qs.set("volume_liters_gte", volume_liters_gte);
+    if (people_count) qs.set("people_count", people_count);
+    if (temperature_min_lte) qs.set("temperature_min_lte", temperature_min_lte);
+
+    return qs;
+  }
+
+  async function loadProducts() {
+    setMsg(msg, "");
+    tbody.innerHTML = `<tr><td colspan="7" class="muted">Загрузка…</td></tr>`;
+
+    const qs = buildQuery();
+
+    try {
+      const data = await apiFetch("/catalog/products" + (qs.toString() ? `?${qs}` : ""));
+      tbody.innerHTML = "";
+      if (!data.length) {
+        tbody.innerHTML = `<tr><td colspan="7" class="muted">Ничего не найдено</td></tr>`;
+        return;
+      }
+      for (const p of data) {
+        const catName = categoryMap.get(p.category_id) || "";
+        tbody.appendChild(productRow(p, catName));
+      }
+    } catch (e) {
+      setMsg(msg, e.message, "error");
+      tbody.innerHTML = `<tr><td colspan="7" class="muted">Ошибка</td></tr>`;
+    }
+  }
+
+  function renderAvailability(slotEl, tr, ids, availableCount) {
+    slotEl.innerHTML = "";
+    const top = document.createElement("div");
+    top.textContent = `Доступно: ${availableCount}`;
+    slotEl.appendChild(top);
+
+    if (!ids.length) return;
+
+    const wrap = document.createElement("div");
+    wrap.className = "row-actions";
+
+    const label = document.createElement("span");
+    label.className = "muted small";
+    label.textContent = "item_id:";
+
+    const sel = document.createElement("select");
+    sel.className = "select-inline";
+    sel.innerHTML = ids.slice(0, 200).map((id) => `<option value="${id}">${id}</option>`).join("");
+    tr.dataset.itemId = String(ids[0]);
+    sel.addEventListener("change", () => (tr.dataset.itemId = sel.value));
+
+    wrap.appendChild(label);
+    wrap.appendChild(sel);
+    slotEl.appendChild(wrap);
+  }
+
+  async function checkAvailability(productId, slotEl, contractBtn, tr) {
+    setMsg(msg, "");
+
+    const pointId = Number(document.getElementById("pointId")?.value || 1);
+    const start = document.getElementById("startDate")?.value;
+    const end = document.getElementById("endDate")?.value;
+
+    if (!start || !end) {
+      slotEl.textContent = "Укажи даты start/end";
+      return;
+    }
+
+    slotEl.textContent = "Проверяю…";
+    contractBtn.disabled = true;
+    tr.dataset.itemId = "";
+
+    try {
+      // Для совместимости: отправляем и point_id и rental_point_id
+      const qs = new URLSearchParams({
+        point_id: String(pointId),
+        rental_point_id: String(pointId),
+        product_id: String(productId),
+        start,
+        end,
+      });
+
+      const a = await apiFetch(`/availability?${qs.toString()}`);
+      const ids = a.item_ids || [];
+      renderAvailability(slotEl, tr, ids, a.available_count ?? ids.length);
+
+      if (ids.length > 0) contractBtn.disabled = false;
+    } catch (e) {
+      slotEl.textContent = `Ошибка: ${e.message}`;
+    }
+  }
+
+  async function createContract(itemId) {
+    setMsg(msg, "");
+    const pointId = Number(document.getElementById("pointId")?.value || 1);
+    const start_date = document.getElementById("startDate")?.value;
+    const planned_end_date = document.getElementById("endDate")?.value;
+
+    try {
+      const contract = await apiFetch("/contracts", {
+        method: "POST",
+        body: {
+          rental_point_id: pointId,
+          start_date,
+          planned_end_date,
+          items: [{ item_id: Number(itemId) }],
+        },
+      });
+      window.location.href = `/contracts/${contract.contract_id}/view`;
+    } catch (e) {
+      if (e.status === 401) {
+        window.location.href = "/login";
+        return;
+      }
+      setMsg(msg, e.message, "error");
+    }
+  }
+
+  tbody.addEventListener("click", async (e) => {
+    const btn = e.target.closest("button[data-action]");
     if (!btn) return;
-    const pid = Number(btn.dataset.productId);
-    btn.disabled = true;
-    try { await checkAvailability(pid); }
-    catch (err) { qs(`avail-${pid}`).textContent = `Ошибка: ${err.message}`; }
-    finally { btn.disabled = false; }
+
+    const tr = e.target.closest("tr");
+    const productId = Number(tr?.dataset.productId);
+    const action = btn.dataset.action;
+
+    const slotEl = tr.querySelector('[data-slot="avail"]');
+    const contractBtn = tr.querySelector('button[data-action="contract"]');
+
+    if (action === "check") {
+      await checkAvailability(productId, slotEl, contractBtn, tr);
+    }
+
+    if (action === "contract") {
+      const itemId = tr.dataset.itemId;
+      if (!itemId) {
+        slotEl.textContent = "Сначала нажми “Доступность”";
+        return;
+      }
+      await createContract(itemId);
+    }
   });
 
-  try { await loadProducts(); }
-  catch (e) { qs("catalogMsg").textContent = `Ошибка: ${e.message}`; }
-});
+  const reloadBtn = document.getElementById("reloadProducts");
+  reloadBtn?.addEventListener("click", loadProducts);
 
+  document.getElementById("resetProducts")?.addEventListener("click", () => {
+    const ids = ["qName","qBrand","qCategory","qPriceMax","qVolume","qPeople","qTemp"];
+    for (const id of ids) {
+      const el = document.getElementById(id);
+      if (!el) continue;
+      el.value = "";
+    }
+    loadProducts();
+  });
+
+  // Enter в любом поле фильтра — выполнить поиск
+  document.querySelectorAll(".filters input, .filters select").forEach((el) => {
+    el.addEventListener("keydown", (ev) => {
+      if (ev.key === "Enter") loadProducts();
+    });
+    if (el.tagName === "SELECT") {
+      el.addEventListener("change", () => {
+        // удобно: категория/параметры сразу обновляют список
+        if (el.id === "qCategory") loadProducts();
+      });
+    }
+  });
+
+  (async () => {
+    await loadCategories();
+    await loadProducts();
+  })();
+}
+
+/* ---------------- MY CONTRACTS ---------------- */
+
+function initMyContracts() {
+  const tbody = document.getElementById("myContractsTbody");
+  if (!tbody) return;
+
+  const msg = document.getElementById("contractsMsg");
+
+  async function load() {
+    setMsg(msg, "");
+    tbody.innerHTML = `<tr><td colspan="7" class="muted">Загрузка…</td></tr>`;
+    try {
+      const rows = await apiFetch("/contracts/my");
+      tbody.innerHTML = "";
+
+      if (!rows.length) {
+        tbody.innerHTML = `<tr><td colspan="7" class="muted">Пока нет договоров</td></tr>`;
+        return;
+      }
+
+      for (const c of rows) {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${c.contract_id}</td>
+          <td>${c.status}</td>
+          <td>${c.rental_point_id}</td>
+          <td>${c.start_date}</td>
+          <td>${c.planned_end_date}</td>
+          <td>${c.actual_end_date ?? ""}</td>
+          <td><a class="btn btn--sm btn--ghost" href="/contracts/${c.contract_id}/view">Открыть</a></td>
+        `;
+        tbody.appendChild(tr);
+      }
+    } catch (e) {
+      setMsg(msg, e.message, "error");
+      tbody.innerHTML = `<tr><td colspan="7" class="muted">Ошибка</td></tr>`;
+    }
+  }
+
+  load();
+}
+
+/* ---------------- CONTRACT VIEW ---------------- */
+
+function initContractView() {
+  const root = document.getElementById("contractView");
+  if (!root) return;
+
+  const contractId = Number(root.dataset.contractId);
+  const header = document.getElementById("contractHeader");
+  const itemsTbody = document.getElementById("itemsTbody");
+  const paymentsTbody = document.getElementById("paymentsTbody");
+  const contractMsg = document.getElementById("contractMsg");
+  const extendMsg = document.getElementById("extendMsg");
+  const changeMsg = document.getElementById("changeMsg");
+
+  async function loadContract() {
+    const c = await apiFetch(`/contracts/${contractId}`);
+    header.textContent = `Статус: ${c.status} | Пункт: ${c.rental_point_id} | ${c.start_date} → ${c.planned_end_date} | rent_total: ${c.total_rent_amount} | deposit_total: ${c.total_deposit_amount}`;
+    return c;
+  }
+
+  async function loadItems(c) {
+    itemsTbody.innerHTML = "";
+    const items = c.items || [];
+    if (!items.length) {
+      itemsTbody.innerHTML = `<tr><td colspan="4" class="muted">Нет позиций</td></tr>`;
+      return;
+    }
+    for (const it of items) {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${it.item_id}</td>
+        <td>${it.product_id}</td>
+        <td>${it.daily_price}</td>
+        <td>${it.deposit_amount}</td>
+      `;
+      itemsTbody.appendChild(tr);
+    }
+  }
+
+  async function loadPayments() {
+    const pays = await apiFetch(`/contracts/${contractId}/payments`);
+    paymentsTbody.innerHTML = "";
+    if (!pays.length) {
+      paymentsTbody.innerHTML = `<tr><td colspan="5" class="muted">Платежей нет</td></tr>`;
+      return;
+    }
+    for (const p of pays) {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${p.payment_id}</td>
+        <td>${p.payment_date}</td>
+        <td>${p.type}</td>
+        <td>${p.method ?? ""}</td>
+        <td>${p.amount}</td>
+      `;
+      paymentsTbody.appendChild(tr);
+    }
+  }
+
+  async function refreshAll() {
+    setMsg(contractMsg, "");
+    try {
+      const c = await loadContract();
+      await loadItems(c);
+      await loadPayments();
+    } catch (e) {
+      setMsg(contractMsg, e.message, "error");
+    }
+  }
+
+  document.getElementById("payBtn")?.addEventListener("click", async () => {
+    setMsg(contractMsg, "");
+    try {
+      const amount = Number(document.getElementById("payAmount")?.value || 0);
+      const type = document.getElementById("payType")?.value;
+      const method = document.getElementById("payMethod")?.value;
+
+      await apiFetch(`/contracts/${contractId}/payments`, {
+        method: "POST",
+        body: { amount, type, method },
+      });
+
+      setMsg(contractMsg, "Оплата добавлена.", "ok");
+      await refreshAll();
+    } catch (e) {
+      setMsg(contractMsg, e.message, "error");
+    }
+  });
+
+  document.getElementById("extendReqBtn")?.addEventListener("click", async () => {
+    setMsg(extendMsg, "");
+    try {
+      const new_planned_end_date = document.getElementById("extendDate")?.value;
+      const r = await apiFetch(`/contracts/${contractId}/extend-request`, {
+        method: "POST",
+        body: { new_planned_end_date },
+      });
+      setMsg(
+        extendMsg,
+        `ok=${r.ok}, extra_rent=${r.extra_rent}${r.reasons?.length ? " | " + r.reasons.join("; ") : ""}`,
+        r.ok ? "ok" : "warn"
+      );
+    } catch (e) {
+      setMsg(extendMsg, e.message, "error");
+    }
+  });
+
+  document.getElementById("changeReqBtn")?.addEventListener("click", async () => {
+    setMsg(changeMsg, "");
+    try {
+      const old_item_id = Number(document.getElementById("changeOldItem")?.value || 0);
+      const new_product_id = Number(document.getElementById("changeNewProduct")?.value || 0);
+
+      const r = await apiFetch(`/contracts/${contractId}/change-item-request`, {
+        method: "POST",
+        body: { old_item_id, new_product_id },
+      });
+
+      setMsg(changeMsg, JSON.stringify(r), "ok");
+    } catch (e) {
+      setMsg(changeMsg, e.message, "error");
+    }
+  });
+
+  document.getElementById("cancelBtn")?.addEventListener("click", async () => {
+    setMsg(contractMsg, "");
+    try {
+      await apiFetch(`/contracts/${contractId}/cancel`, { method: "POST" });
+      setMsg(contractMsg, "Договор отменён.", "ok");
+      await refreshAll();
+    } catch (e) {
+      setMsg(contractMsg, e.message, "error");
+    }
+  });
+
+  refreshAll();
+}
+
+/* ---------------- BOOT ---------------- */
+
+document.addEventListener("DOMContentLoaded", () => {
+  initLogout();
+  initLogin();
+  initRegister();
+  initCatalog();
+  initMyContracts();
+  initContractView();
+  initDashboard();
+});

@@ -1,19 +1,23 @@
 {% extends "base.html" %}
-{% block title %}Dashboard{% endblock %}
+{% block title %}Личный кабинет{% endblock %}
+
 {% block content %}
 <div class="card">
-  <h1>Dashboard</h1>
-  <meta charset="UTF-8">
-  <p>
-    Вы вошли как:
-    <b>{{ user.kind }}</b>
-    {% if user.kind == "client" %}
-      (client_id={{ user.client.client_id }})
-    {% else %}
-      (employee_id={{ user.employee.employee_id }}, role={{ user.employee.role }}, point={{ user.employee.rental_point_id }})
-    {% endif %}
-  </p>
+  {% if user.kind == "client" %}
+    <h1>Личный кабинет клиента</h1>
+    <meta charset="utf-8" />
+    <p class="muted">Здесь — быстрые ссылки на основной сценарий.</p>
 
-  <p class="msg ok">Теперь можно оборачивать остальные ручки в UI (каталог, договоры, оплаты, возвраты).</p>
+    <div class="actions">
+      <a class="btn btn--primary" href="/catalog">Выбрать снаряжение</a>
+      <a class="btn" href="/my/contracts">Мои договоры</a>
+    </div>
+
+    <div class="hr"></div>
+    <div id="meBox" class="muted">Профиль загружается…</div>
+  {% else %}
+    <h1>Кабинет сотрудника</h1>
+    <p class="muted">Сценарии сотрудников подключим после клиентского флоу.</p>
+  {% endif %}
 </div>
 {% endblock %}
