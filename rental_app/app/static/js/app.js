@@ -210,6 +210,9 @@ function shortDesc(s, n = 80) {
 function productRow(p, categoryName) {
   const tr = document.createElement("tr");
   tr.dataset.productId = String(p.product_id);
+  tr.dataset.productName = String(p.name || "");
+  tr.dataset.productDailyPrice = String(p.default_daily_price ?? "");
+  tr.dataset.productDeposit = String(p.default_deposit ?? "");
 
   const secondLine = [
     p.brand ? `бренд: ${p.brand}` : null,
@@ -229,7 +232,7 @@ function productRow(p, categoryName) {
     <td>
       <div class="row-actions">
         <button class="btn btn--sm" data-action="check">Доступность</button>
-        <button class="btn btn--sm btn--primary" data-action="contract" disabled>Создать договор</button>
+        <button class="btn btn--sm btn--primary" data-action="contract" disabled>К оформлению</button>
       </div>
       <div class="muted small" data-slot="avail"></div>
     </td>
@@ -374,30 +377,33 @@ function initCatalog() {
     }
   }
 
-  async function createContract(itemId) {
+  function openDraftContract(itemId, tr) {
     setMsg(msg, "");
     const pointId = Number(document.getElementById("pointId")?.value || 1);
     const start_date = document.getElementById("startDate")?.value;
     const planned_end_date = document.getElementById("endDate")?.value;
 
+    const draftId = Date.now();
+    const draft = {
+      draft_id: draftId,
+      item_id: Number(itemId),
+      product_id: Number(tr?.dataset.productId || 0),
+      product_name: tr?.dataset.productName || "",
+      daily_price: tr?.dataset.productDailyPrice || "",
+      deposit_amount: tr?.dataset.productDeposit || "",
+      rental_point_id: pointId,
+      start_date,
+      planned_end_date,
+    };
+
     try {
-      const contract = await apiFetch("/contracts", {
-        method: "POST",
-        body: {
-          rental_point_id: pointId,
-          start_date,
-          planned_end_date,
-          items: [{ item_id: Number(itemId) }],
-        },
-      });
-      window.location.href = `/contracts/${contract.contract_id}/view`;
+      sessionStorage.setItem(`draft_contract_${draftId}`, JSON.stringify(draft));
     } catch (e) {
-      if (e.status === 401) {
-        window.location.href = "/login";
-        return;
-      }
-      setMsg(msg, e.message, "error");
+      setMsg(msg, "Не удалось сохранить черновик. Попробуйте ещё раз.", "error");
+      return;
     }
+
+    window.location.href = `/contracts/${draftId}/view?draft=1`;
   }
 
   tbody.addEventListener("click", async (e) => {
@@ -421,7 +427,7 @@ function initCatalog() {
         slotEl.textContent = "Сначала нажми “Доступность”";
         return;
       }
-      await createContract(itemId);
+      openDraftContract(itemId, tr);
     }
   });
 
@@ -506,17 +512,69 @@ function initContractView() {
   if (!root) return;
 
   const contractId = Number(root.dataset.contractId);
+  const draftKey = `draft_contract_${contractId}`;
+  const titleEl = document.getElementById("contractTitle");
   const header = document.getElementById("contractHeader");
   const itemsTbody = document.getElementById("itemsTbody");
   const paymentsTbody = document.getElementById("paymentsTbody");
   const contractMsg = document.getElementById("contractMsg");
   const extendMsg = document.getElementById("extendMsg");
   const changeMsg = document.getElementById("changeMsg");
+  const draftBox = document.getElementById("draftBox");
+  const draftInfo = document.getElementById("draftInfo");
+  const draftMsg = document.getElementById("draftMsg");
+  const createBtn = document.getElementById("createContractBtn");
+  const contractActions = document.getElementById("contractActions");
 
   async function loadContract() {
     const c = await apiFetch(`/contracts/${contractId}`);
     header.textContent = `Статус: ${c.status} | Пункт: ${c.rental_point_id} | ${c.start_date} → ${c.planned_end_date} | rent_total: ${c.total_rent_amount} | deposit_total: ${c.total_deposit_amount}`;
     return c;
+  }
+
+  function loadDraft() {
+    const raw = sessionStorage.getItem(draftKey);
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function showContractMode(c) {
+    if (titleEl) titleEl.textContent = `Договор #${c.contract_id}`;
+    if (draftBox) draftBox.style.display = "none";
+    if (contractActions) contractActions.style.display = "";
+  }
+
+  function showDraftMode(draft) {
+    if (titleEl) titleEl.textContent = "Черновик договора";
+    header.textContent = "Черновик — договор будет создан после подтверждения.";
+    if (draftInfo) {
+      const parts = [
+        `Пункт: ${draft.rental_point_id}`,
+        `${draft.start_date} → ${draft.planned_end_date}`,
+        `item_id: ${draft.item_id}`,
+        `product_id: ${draft.product_id}`,
+        draft.product_name ? draft.product_name : "",
+      ].filter(Boolean);
+      draftInfo.textContent = parts.join(" | ");
+    }
+    if (draftBox) draftBox.style.display = "";
+    if (contractActions) contractActions.style.display = "none";
+
+    itemsTbody.innerHTML = "";
+    const daily = draft.daily_price ? draft.daily_price : "—";
+    const deposit = draft.deposit_amount ? draft.deposit_amount : "—";
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td>${draft.item_id ?? "—"}</td>
+      <td>${draft.product_id ?? "—"}</td>
+      <td>${daily}</td>
+      <td>${deposit}</td>
+    `;
+    itemsTbody.appendChild(row);
   }
 
   async function loadItems(c) {
@@ -562,9 +620,20 @@ function initContractView() {
     setMsg(contractMsg, "");
     try {
       const c = await loadContract();
+      showContractMode(c);
       await loadItems(c);
       await loadPayments();
     } catch (e) {
+      if (e.status === 404) {
+        const draft = loadDraft();
+        if (draft) {
+          showDraftMode(draft);
+          return;
+        }
+        setMsg(contractMsg, "Договор не найден.", "error");
+        if (contractActions) contractActions.style.display = "none";
+        return;
+      }
       setMsg(contractMsg, e.message, "error");
     }
   }
@@ -633,6 +702,36 @@ function initContractView() {
       setMsg(contractMsg, e.message, "error");
     }
   });
+
+  createBtn?.addEventListener("click", async () => {
+  setMsg(draftMsg, "");
+  const draft = loadDraft();
+  if (!draft) {
+    setMsg(draftMsg, "Черновик не найден.", "error");
+    return;
+  }
+  try {
+    const body = {
+      rental_point_id: draft.rental_point_id,
+      start_date: draft.start_date,
+      planned_end_date: draft.planned_end_date,
+      items: [{ item_id: Number(draft.item_id) }],
+    };
+
+    // ✅ если черновик создан сотрудником — он содержит client_id
+    if (draft.client_id) body.client_id = Number(draft.client_id);
+
+    const contract = await apiFetch("/contracts", { method: "POST", body });
+    sessionStorage.removeItem(draftKey);
+    window.location.href = `/contracts/${contract.contract_id}/view`;
+  } catch (e) {
+    if (e.status === 401) {
+      window.location.href = "/login";
+      return;
+    }
+    setMsg(draftMsg, e.message, "error");
+  }
+});
 
   refreshAll();
 }

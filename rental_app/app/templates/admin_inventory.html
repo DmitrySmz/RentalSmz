@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Админ: Инвентарь{% endblock %}
+
+{% block content %}
+<div class="card" id="adminInventoryPage">
+  <h1>Админ: Инвентарь</h1>
+  <p class="muted">Items: список, создание, смена статуса, перемещение между пунктами.</p>
+
+  <div class="filters">
+    <div>
+      <label>point_id</label>
+      <input id="admInvPoint" type="number" min="1" value="1" />
+    </div>
+    <div>
+      <label>product_id (optional)</label>
+      <input id="admInvProduct" type="number" min="1" />
+    </div>
+    <div class="filters__actions">
+      <button class="btn btn--primary" id="admInvReload">Показать</button>
+    </div>
+  </div>
+
+  <div class="hr"></div>
+
+  <h2>Создать предмет</h2>
+  <div class="grid2">
+    <div><label>product_id</label><input id="admNewItemProd" type="number" min="1" /></div>
+    <div><label>rental_point_id</label><input id="admNewItemPoint" type="number" min="1" value="1" /></div>
+    <div><label>inventory_number</label><input id="admNewItemInv" type="text" /></div>
+    <div><label>color</label><input id="admNewItemColor" type="text" /></div>
+    <div><label>size</label><input id="admNewItemSize" type="text" /></div>
+    <div>
+      <label>condition_status</label>
+      <select id="admNewItemCond">
+        <option value="new">new</option>
+        <option value="good" selected>good</option>
+        <option value="worn">worn</option>
+        <option value="broken">broken</option>
+        <option value="lost">lost</option>
+      </select>
+    </div>
+    <div>
+      <label>is_available</label>
+      <select id="admNewItemAvail">
+        <option value="true" selected>true</option>
+        <option value="false">false</option>
+      </select>
+    </div>
+    <div class="filters__actions">
+      <button class="btn btn--primary" id="admNewItemBtn">Создать</button>
+    </div>
+  </div>
+
+  <div id="admInvMsg" class="msg"></div>
+
+  <div class="hr"></div>
+
+  <h2>Список предметов</h2>
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>item_id</th><th>product</th><th>point</th><th>inv</th><th>cond</th><th>available</th><th>actions</th>
+        </tr>
+      </thead>
+      <tbody id="admInvTbody">
+        <tr><td colspan="7" class="muted">Загрузка…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', path='js/admin.js') }}"></script>
+{% endblock %}

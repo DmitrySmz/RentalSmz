@@ -5,7 +5,7 @@
 <div class="card" id="contractView" data-contract-id="{{ contract_id }}">
   <div class="row-between">
     <div>
-      <h1>Договор #{{ contract_id }}</h1>
+      <h1 id="contractTitle">Договор #{{ contract_id }}</h1>
       <div id="contractHeader" class="muted">Загрузка…</div>
     </div>
     <div class="actions">
@@ -14,6 +14,20 @@
   </div>
 
   <div class="hr"></div>
+
+  <div id="draftBox" style="display:none;">
+    <div class="row-between">
+      <div>
+        <h2>Черновик</h2>
+        <div id="draftInfo" class="muted small"></div>
+      </div>
+      <div class="actions">
+        <button class="btn btn--primary" id="createContractBtn">Создать договор</button>
+      </div>
+    </div>
+    <div id="draftMsg" class="msg"></div>
+    <div class="hr"></div>
+  </div>
 
   <h2>Позиции</h2>
   <div class="table-wrap">
@@ -32,91 +46,215 @@
     </table>
   </div>
 
+  <div id="contractActions">
+    <div class="hr"></div>
+
+    <h2>Оплаты</h2>
+    <div class="grid2">
+      <div>
+        <label>Сумма</label>
+        <input id="payAmount" type="number" step="0.01" placeholder="300" />
+      </div>
+      <div>
+        <label>Тип</label>
+        <select id="payType">
+          <option value="deposit">deposit</option>
+          <option value="rent">rent</option>
+          <option value="penalty">penalty</option>
+          <option value="deposit_refund">deposit_refund</option>
+        </select>
+      </div>
+      <div>
+        <label>Метод</label>
+        <select id="payMethod">
+          <option value="card">card</option>
+          <option value="online">online</option>
+          <option value="cash">cash</option>
+        </select>
+      </div>
+      <div class="filters__actions">
+        <button class="btn btn--primary" id="payBtn">Добавить оплату</button>
+      </div>
+    </div>
+
+    <div class="table-wrap" style="margin-top:10px;">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Дата</th>
+            <th>Тип</th>
+            <th>Метод</th>
+            <th>Сумма</th>
+          </tr>
+        </thead>
+        <tbody id="paymentsTbody">
+          <tr><td colspan="5" class="muted">Загрузка…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="hr"></div>
+
+    <h2>Запросить продление</h2>
+    <div class="grid2">
+      <div>
+        <label>Новая planned_end_date</label>
+        <input id="extendDate" type="date" />
+      </div>
+      <div class="filters__actions">
+        <button class="btn" id="extendReqBtn">Проверить и рассчитать</button>
+      </div>
+    </div>
+    <div id="extendMsg" class="msg"></div>
+
+    <div class="hr"></div>
+
+    <h2>Запросить замену предмета</h2>
+    <div class="grid2">
+      <div>
+        <label>old_item_id</label>
+        <input id="changeOldItem" type="number" placeholder="1" />
+      </div>
+      <div>
+        <label>new_product_id</label>
+        <input id="changeNewProduct" type="number" placeholder="2" />
+      </div>
+      <div class="filters__actions">
+        <button class="btn" id="changeReqBtn">Проверить варианты</button>
+      </div>
+    </div>
+    <div id="changeMsg" class="msg"></div>
+
+    <div class="hr"></div>
+
+    <h2>Отмена</h2>
+    <p class="muted small">Отмена разрешена для draft (по текущим правилам API).</p>
+    <button class="btn btn--danger" id="cancelBtn">Отменить договор</button>
+  </div>
+{% if user.kind == "employee" %}
   <div class="hr"></div>
 
-  <h2>Оплаты</h2>
+  <h2>Операции сотрудника</h2>
+
+  <h2 style="margin-top:10px;">Применить продление</h2>
   <div class="grid2">
     <div>
-      <label>Сумма</label>
-      <input id="payAmount" type="number" step="0.01" placeholder="300" />
+      <label>new_planned_end_date</label>
+      <input id="empExtendDate" type="date" />
     </div>
     <div>
-      <label>Тип</label>
-      <select id="payType">
-        <option value="deposit">deposit</option>
-        <option value="rent">rent</option>
-        <option value="penalty">penalty</option>
-        <option value="deposit_refund">deposit_refund</option>
-      </select>
-    </div>
-    <div>
-      <label>Метод</label>
-      <select id="payMethod">
+      <label>method</label>
+      <select id="empExtendMethod">
+        <option value="cash">cash</option>
         <option value="card">card</option>
         <option value="online">online</option>
-        <option value="cash">cash</option>
       </select>
     </div>
     <div class="filters__actions">
-      <button class="btn btn--primary" id="payBtn">Добавить оплату</button>
+      <button class="btn btn--primary" id="empExtendApplyBtn">Применить продление</button>
     </div>
   </div>
-
-  <div class="table-wrap" style="margin-top:10px;">
-    <table class="table">
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>Дата</th>
-          <th>Тип</th>
-          <th>Метод</th>
-          <th>Сумма</th>
-        </tr>
-      </thead>
-      <tbody id="paymentsTbody">
-        <tr><td colspan="5" class="muted">Загрузка…</td></tr>
-      </tbody>
-    </table>
-  </div>
+  <div id="empExtendMsg" class="msg"></div>
 
   <div class="hr"></div>
 
-  <h2>Запросить продление</h2>
-  <div class="grid2">
-    <div>
-      <label>Новая planned_end_date</label>
-      <input id="extendDate" type="date" />
-    </div>
-    <div class="filters__actions">
-      <button class="btn" id="extendReqBtn">Проверить и рассчитать</button>
-    </div>
-  </div>
-  <div id="extendMsg" class="msg"></div>
-
-  <div class="hr"></div>
-
-  <h2>Запросить замену предмета</h2>
+  <h2>Применить замену предмета</h2>
   <div class="grid2">
     <div>
       <label>old_item_id</label>
-      <input id="changeOldItem" type="number" placeholder="1" />
+      <input id="empChangeOldItem" type="number" />
     </div>
     <div>
-      <label>new_product_id</label>
-      <input id="changeNewProduct" type="number" placeholder="2" />
+      <label>new_item_id</label>
+      <input id="empChangeNewItem" type="number" />
+    </div>
+    <div>
+      <label>method</label>
+      <select id="empChangeMethod">
+        <option value="cash">cash</option>
+        <option value="card">card</option>
+        <option value="online">online</option>
+      </select>
     </div>
     <div class="filters__actions">
-      <button class="btn" id="changeReqBtn">Проверить варианты</button>
+      <button class="btn btn--primary" id="empChangeApplyBtn">Заменить</button>
     </div>
   </div>
-  <div id="changeMsg" class="msg"></div>
+  <div id="empChangeApplyMsg" class="msg"></div>
 
   <div class="hr"></div>
 
-  <h2>Отмена</h2>
-  <p class="muted small">Отмена разрешена для draft (по текущим правилам API).</p>
-  <button class="btn btn--danger" id="cancelBtn">Отменить договор</button>
+  <h2>Возврат</h2>
+  <p class="muted small">items — через запятую (пусто = вернуть всё). damage — JSON вида {"1":"worn","2":"broken"}.</p>
+  <div class="grid2">
+    <div>
+      <label>items (csv)</label>
+      <input id="empReturnItems" type="text" placeholder="12,13" />
+    </div>
+    <div>
+      <label>damage (json)</label>
+      <input id="empReturnDamage" type="text" placeholder='{"12":"worn"}' />
+    </div>
+    <div>
+      <label>penalty_amount (optional)</label>
+      <input id="empReturnPenalty" type="number" step="0.01" placeholder="0" />
+    </div>
+    <div>
+      <label>method</label>
+      <select id="empReturnMethod">
+        <option value="cash">cash</option>
+        <option value="card">card</option>
+        <option value="online">online</option>
+      </select>
+    </div>
+    <div class="filters__actions">
+      <button class="btn btn--primary" id="empReturnBtn">Принять возврат</button>
+    </div>
+  </div>
+  <div id="empReturnMsg" class="msg"></div>
+
+  <div class="hr"></div>
+
+  <h2>Просрочка / невозврат</h2>
+  <div class="actions">
+    <button class="btn" id="empMarkOverdueBtn">Отметить просрочку (manager/admin)</button>
+  </div>
+  <div id="empOverdueMsg" class="msg"></div>
+
+  <div class="hr"></div>
+
+  <h2>Закрыть как “утеряно”</h2>
+  <p class="muted small">items — через запятую (пусто = все предметы).</p>
+  <div class="grid2">
+    <div>
+      <label>items (csv)</label>
+      <input id="empLostItems" type="text" placeholder="12,13" />
+    </div>
+    <div>
+      <label>penalty_amount (optional)</label>
+      <input id="empLostPenalty" type="number" step="0.01" placeholder="0" />
+    </div>
+    <div>
+      <label>method</label>
+      <select id="empLostMethod">
+        <option value="cash">cash</option>
+        <option value="card">card</option>
+        <option value="online">online</option>
+      </select>
+    </div>
+    <div class="filters__actions">
+      <button class="btn btn--danger" id="empCloseLostBtn">Закрыть как утерю</button>
+    </div>
+  </div>
+  <div id="empLostMsg" class="msg"></div>
+{% endif %}
 
   <div id="contractMsg" class="msg"></div>
 </div>
+{% endblock %}
+{% block scripts %}
+  {% if user and user.kind == "employee" %}
+    <script src="{{ url_for('static', path='js/employee.js') }}"></script>
+  {% endif %}
 {% endblock %}

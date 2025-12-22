@@ -6,7 +6,7 @@
   {% if user.kind == "client" %}
     <h1>Личный кабинет клиента</h1>
     <meta charset="utf-8" />
-    <p class="muted">Здесь — быстрые ссылки на основной сценарий.</p>
+    <p class="muted">Каталог → доступность → черновик → создать договор → оплата → статусы.</p>
 
     <div class="actions">
       <a class="btn btn--primary" href="/catalog">Выбрать снаряжение</a>
@@ -17,7 +17,24 @@
     <div id="meBox" class="muted">Профиль загружается…</div>
   {% else %}
     <h1>Кабинет сотрудника</h1>
-    <p class="muted">Сценарии сотрудников подключим после клиентского флоу.</p>
+    <p class="muted">Оформление договоров, оплаты, возвраты, продления, просрочка/невозврат.</p>
+
+    <div class="actions">
+      <a class="btn btn--primary" href="/employee/contracts/new">Оформить договор</a>
+      <a class="btn" href="/employee/contracts">Список договоров</a>
+
+      {% if user.employee and (user.employee.role in ["admin","manager"]) %}
+        <a class="btn" href="/admin/reports">Отчёты</a>
+      {% endif %}
+
+      {% if user.employee and user.employee.role == "admin" %}
+        <a class="btn" href="/admin/catalog">Каталог (админ)</a>
+        <a class="btn" href="/admin/inventory">Инвентарь (админ)</a>
+      {% endif %}
+    </div>
+
+    <div class="hr"></div>
+    <div id="meBox" class="muted">Профиль загружается…</div>
   {% endif %}
 </div>
 {% endblock %}

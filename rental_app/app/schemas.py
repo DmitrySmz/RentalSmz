@@ -328,3 +328,11 @@ class PointReportOut(BaseModel):
     penalties_income: Decimal
     overdue_contracts: int
     popular_products: List[PopularProductOut] = []
+
+class RentalPointOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    rental_point_id: int
+    name: str
+    address: Optional[str] = None
+    phone: Optional[str] = None

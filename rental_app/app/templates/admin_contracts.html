@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Договоры{% endblock %}
+
+{% block content %}
+<div class="card" id="adminContractsPage">
+  <h1>Договоры</h1>
+  <p class="muted">UI использует /contracts (список для сотрудника).</p>
+  <div id="adminContractsMount"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', path='js/admin.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Отчёты{% endblock %}
+
+{% block content %}
+<div class="card" id="adminReportsPage">
+  <h1>Отчёты по пункту</h1>
+  <p class="muted">Доступно admin/manager. Данные из /admin/reports/point/{id}.</p>
+
+  <div class="filters">
+    <div>
+      <label>point_id</label>
+      <input id="admRepPoint" type="number" min="1" value="1" />
+    </div>
+    <div>
+      <label>from</label>
+      <input id="admRepFrom" type="date" />
+    </div>
+    <div>
+      <label>to</label>
+      <input id="admRepTo" type="date" />
+    </div>
+    <div class="filters__actions">
+      <button class="btn btn--primary" id="admRepLoad">Сформировать</button>
+    </div>
+  </div>
+
+  <div id="admRepMsg" class="msg"></div>
+  <div class="hr"></div>
+  <pre id="admRepBox" class="card" style="white-space:pre-wrap;"></pre>
+</div>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', path='js/admin.js') }}"></script>
+{% endblock %}

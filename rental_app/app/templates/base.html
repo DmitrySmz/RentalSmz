@@ -1,4 +1,3 @@
-<!-- app/templates/base.html -->
 <!doctype html>
 <html lang="ru">
 <head>
@@ -21,6 +20,17 @@
             <a href="/my/contracts">Мои договоры</a>
           {% else %}
             <a href="/dashboard">Кабинет</a>
+            <a href="/employee/contracts">Договоры</a>
+            <a href="/employee/contracts/new">Новый договор</a>
+
+            {% if user.employee and (user.employee.role in ["admin","manager"]) %}
+              <a href="/admin/reports">Отчёты</a>
+            {% endif %}
+
+            {% if user.employee and user.employee.role == "admin" %}
+              <a href="/admin/catalog">Админ: Каталог</a>
+              <a href="/admin/inventory">Админ: Инвентарь</a>
+            {% endif %}
           {% endif %}
 
           <a href="#" id="logoutLink">Выйти</a>
@@ -39,5 +49,6 @@
   </main>
 
   <script src="{{ url_for('static', path='js/app.js') }}"></script>
+  {% block scripts %}{% endblock %}
 </body>
 </html>

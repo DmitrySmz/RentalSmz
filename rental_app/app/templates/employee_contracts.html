@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Договоры{% endblock %}
+
+{% block content %}
+<div class="card" id="empContractsPage">
+  <div class="row-between">
+    <div>
+      <h1>Договоры</h1>
+      <p class="muted">Список договоров пункта (admin видит все).</p>
+    </div>
+    <div class="actions">
+      <a class="btn btn--primary" href="/employee/contracts/new">Новый договор</a>
+    </div>
+  </div>
+
+  <div class="filters">
+    <div>
+      <label>status</label>
+      <select id="empStatus">
+        <option value="">любые</option>
+        <option value="draft">draft</option>
+        <option value="active">active</option>
+        <option value="overdue">overdue</option>
+        <option value="closed">closed</option>
+        <option value="canceled">canceled</option>
+      </select>
+    </div>
+    <div>
+      <label>client_id</label>
+      <input id="empClientId" type="number" min="1" />
+    </div>
+    <div>
+      <label>from_date</label>
+      <input id="empFrom" type="date" />
+    </div>
+    <div>
+      <label>to_date</label>
+      <input id="empTo" type="date" />
+    </div>
+    <div class="filters__actions">
+      <button class="btn btn--primary" id="empReload">Показать</button>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>status</th>
+          <th>client_id</th>
+          <th>point</th>
+          <th>start</th>
+          <th>end</th>
+          <th>rent_total</th>
+          <th>deposit_total</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="empContractsTbody">
+        <tr><td colspan="9" class="muted">Загрузка…</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div id="empContractsMsg" class="msg"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', path='js/employee.js') }}"></script>
+{% endblock %}

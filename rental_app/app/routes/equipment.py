@@ -159,3 +159,9 @@ def availability(
         available_count=available_count,
         item_ids=item_ids,
     )
+
+
+@router.get("/rental-points", response_model=List[schemas.RentalPointOut])
+def list_rental_points(db: Session = Depends(get_db)):
+    q = select(models.RentalPoint).order_by(models.RentalPoint.rental_point_id.asc())
+    return db.execute(q).scalars().all()
