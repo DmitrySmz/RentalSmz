@@ -14,6 +14,8 @@ from .dependencies import require_user
 from .routes import pages, equipment, rentals
 from .routes import auth as auth_routes
 from .routes import admin as admin_routes
+from .routes import demo_concurrency as demo_concurrency_routes
+
 from .utils.session_manager import session_manager, SessionUser
 from .utils.cookies import (
     get_remember_payload,
@@ -39,6 +41,8 @@ app.include_router(equipment.router)
 app.include_router(rentals.router)
 app.include_router(auth_routes.router)
 app.include_router(admin_routes.router)
+app.include_router(demo_concurrency_routes.router)
+
 
 # -------- Remember-cookie auto-login middleware --------
 @app.middleware("http")

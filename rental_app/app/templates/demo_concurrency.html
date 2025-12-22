@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}Демо блокировок{% endblock %}
+
+{% block content %}
+<section id="demoConcurrencyPage">
+  <h1>Демо: одновременная работа пользователей и блокировки</h1>
+
+  <p class="muted">
+    Это отдельный демонстрационный сценарий. Он <b>не меняет</b> основной флоу, а создаёт договоры через отдельные demo-endpoints.
+    Цель — показать, что без блокировок возможна гонка и некорректное состояние (баланс уходит в минус),
+    а с блокировкой строки (SELECT … FOR UPDATE) — поведение корректное.
+  </p>
+
+  <div class="card">
+    <h3>Шаги для воспроизведения</h3>
+    <ol>
+      <li>Открой страницу <code>/demo/concurrency</code> в двух браузерах/профилях и войди под <b>двумя разными клиентами</b>.</li>
+      <li>Выбери <b>одинаковые</b> <code>rental_point_id</code>, <code>product_id</code>, <code>start</code>, <code>end</code>.</li>
+      <li>Нажми <b>«Получить доступные item_id»</b> в обоих браузерах и убедись, что выбран один и тот же <code>item_id</code>.</li>
+      <li>В браузере A поставь задержку, например <b>8000</b> мс, и нажми <b>«Без блокировок»</b>.</li>
+      <li>Пока A «спит», в браузере B нажми <b>«Без блокировок»</b> с задержкой 0 мс.</li>
+      <li>После завершения A обнови баланс — увидишь <b>balance_units = -1</b> (ошибка конкуренции).</li>
+      <li>Далее (по желанию) нажми <b>«Сбросить мои черновики»</b> у каждого клиента и повтори шаги 4–5, но с кнопкой <b>«С блокировкой»</b>.
+          Второй запрос получит <b>409</b>, а баланс в минус не уйдёт.</li>
+    </ol>
+  </div>
+
+  <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 16px;">
+    <div class="card">
+      <h3>Параметры</h3>
+
+      <div class="field">
+        <label>rental_point_id</label>
+        <input id="demoPointId" type="number" value="1" min="1" />
+      </div>
+
+      <div class="field">
+        <label>product_id (модель/товар)</label>
+        <input id="demoProductId" type="number" placeholder="например: 1" min="1" />
+      </div>
+
+      <div class="row" style="display:flex; gap:12px;">
+        <div class="field" style="flex:1;">
+          <label>start_date</label>
+          <input id="demoStart" type="date" />
+        </div>
+        <div class="field" style="flex:1;">
+          <label>end_date</label>
+          <input id="demoEnd" type="date" />
+        </div>
+      </div>
+
+      <div class="row-actions">
+        <button class="btn" id="demoFetchAvailBtn">Получить доступные item_id</button>
+      </div>
+
+      <div class="field">
+        <label>item_id (один и тот же в двух браузерах!)</label>
+        <input id="demoItemId" type="number" placeholder="будет подставлен из доступности" min="1" />
+      </div>
+
+      <details style="margin-top:8px;">
+        <summary class="muted">Показать список item_id из доступности</summary>
+        <pre id="demoAvailBox" class="pre"></pre>
+      </details>
+
+      <div class="field" style="margin-top:12px;">
+        <label>delay_ms (задержка в одном из браузеров)</label>
+        <input id="demoDelay" type="number" value="0" min="0" max="60000" step="100" />
+      </div>
+
+      <div class="row-actions">
+        <button class="btn btn--primary" id="demoNoLockBtn">Оформить (DEMO) — БЕЗ блокировок</button>
+        <button class="btn" id="demoWithLockBtn">Оформить (DEMO) — С блокировкой FOR UPDATE</button>
+      </div>
+
+      <div class="row-actions" style="margin-top:8px;">
+        <button class="btn btn--ghost" id="demoRefreshBtn">Обновить баланс</button>
+        <button class="btn btn--ghost" id="demoResetBtn">Сбросить мои черновики</button>
+      </div>
+
+      <div id="demoMsg" class="msg"></div>
+    </div>
+
+    <div class="card">
+      <h3>Баланс по item_id</h3>
+      <div class="muted small">
+        <div><code>total_units = 1</code></div>
+        <div><code>reserved_units</code> — сколько строк <code>contract_items</code> с этим <code>item_id</code> пересекаются по датам и имеют статус <code>draft/active/overdue</code></div>
+        <div><code>balance_units = 1 - reserved_units</code> → если ушло в минус, значит «один и тот же предмет продали дважды»</div>
+      </div>
+      <pre id="demoBalanceBox" class="pre"></pre>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Последний ответ API</h3>
+    <pre id="demoLastResult" class="pre"></pre>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', path='js/demo_concurrency.js') }}"></script>
+{% endblock %}
